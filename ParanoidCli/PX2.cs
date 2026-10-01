@@ -8,18 +8,22 @@ namespace ParanoidCli;
 public static class PX2 // shared utils + crypto layers
 {
     // ====== Key forge ======
-    public static byte[] MixSources(IEnumerable<byte[]> sources, int poolBytes
-    = 64)
+    public static byte[] MixSources(IEnumerable<byte[]> sources, int poolBytes = 64)
     {
         using var sha = SHA512.Create();
         var acc = new byte[poolBytes];
+        bool any = false;
         foreach (var s in sources)
         {
+            any = true;
             var h = sha.ComputeHash(s ?? Array.Empty<byte>());
             for (int i = 0; i < poolBytes; i++) acc[i] ^= h[i];
         }
-        var sys = new byte[poolBytes]; RandomNumberGenerator.Fill(sys);
-        for (int i = 0; i < poolBytes; i++) acc[i] ^= sys[i];
+        if (!any)
+        {
+            var sys = new byte[poolBytes]; RandomNumberGenerator.Fill(sys);
+            for (int i = 0; i < poolBytes; i++) acc[i] ^= sys[i];
+        }
         return acc;
     }
 
