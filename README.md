@@ -1,8 +1,24 @@
 # ParanoidCli
 
-ParanoidCli is a C# command-line tool for experimenting with layered file protection and key derivation. It combines source mixing, Argon2id, optional sealed-length padding, optional FEC-style packaging, and double AES-GCM encryption into a single workflow.
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![Language](https://img.shields.io/badge/Language-C%23-178600?logo=csharp&logoColor=white)](https://learn.microsoft.com/dotnet/csharp/)
+[![Status](https://img.shields.io/badge/Status-Experimental-orange)](https://github.com/Sam-JobLens360/ParanoidCli)
+[![Visibility](https://img.shields.io/badge/Repo-Public-success)](https://github.com/Sam-JobLens360/ParanoidCli)
 
-> This project is experimental and security-focused. It is intended for learning, prototyping, and iterative hardening.
+ParanoidCli is an experimental C# command-line project focused on layered file protection, key derivation, and metadata reduction. It combines source mixing, Argon2id, optional sealed-length padding, optional FEC-style packaging, and double AES-GCM encryption into a single workflow.
+
+> This repository is intentionally public and research-oriented. It exists as a portfolio-ready security experiment for exploring cryptographic design, file-format hardening, and CLI implementation patterns.
+
+## Research focus
+
+This project is designed as a practical exploration of:
+
+- key derivation from multiple source inputs
+- layered encryption workflows
+- file size obfuscation techniques
+- error-correction-inspired packaging
+- secure command-line application design
+- iterative hardening and vulnerability review
 
 ## What it does
 
@@ -87,6 +103,36 @@ The final payload is encrypted twice:
 
 Separate keys are derived from the master key using HKDF-style expansion with different labels.
 
+## CLI reference
+
+### `encrypt`
+
+Encrypt a file with sealed length and optional FEC before crypto.
+
+| Option | Required | Description | Default |
+| --- | --- | --- | --- |
+| `--in` | Yes | Input file to encrypt | — |
+| `--out` | Yes | Output encrypted blob | — |
+| `--salt-hex` | Yes | Salt in hex format | — |
+| `--src` | No | Zero or more key source values | none |
+| `--pad` | No | Padding mode: `none`, `block`, or `pow2` | `none` |
+| `--block` | No | Block size used when `--pad block` is selected | `4096` |
+| `--fec-k` | No | Number of data shards; `0` disables FEC | `0` |
+| `--fec-p` | No | Number of parity shards | `0` |
+| `--fec-shard` | No | Shard size used by FEC | `4096` |
+| `--fec-seed` | No | Seed used for parity row generation | `0xC0FFEE` |
+
+### `decrypt`
+
+Decrypt a blob and restore the original file.
+
+| Option | Required | Description | Default |
+| --- | --- | --- | --- |
+| `--in` | Yes | Encrypted input blob | — |
+| `--out` | Yes | Output file for the restored plaintext | — |
+| `--salt-hex` | Yes | Same salt used at encryption time | — |
+| `--src` | No | Same source values used at encryption time | none |
+
 ## Repository layout
 
 - `Program.cs` — CLI entry point and command wiring
@@ -132,19 +178,6 @@ dotnet run -- encrypt \
   --fec-seed 12648430
 ```
 
-### Encrypt options
-
-- `--in` — input file to encrypt
-- `--out` — output encrypted blob
-- `--salt-hex` — required salt in hex format
-- `--src` — zero or more source values used in key derivation
-- `--pad` — one of `none`, `block`, or `pow2`
-- `--block` — block size used when `--pad block` is selected
-- `--fec-k` — number of data shards; `0` disables FEC
-- `--fec-p` — number of parity shards
-- `--fec-shard` — shard size used by FEC
-- `--fec-seed` — seed used for parity row generation
-
 ## Decrypt
 
 ```bash
@@ -156,33 +189,56 @@ dotnet run -- decrypt \
   --src @seeds/source.txt
 ```
 
-### Decrypt options
-
-- `--in` — encrypted input blob
-- `--out` — output file for the restored plaintext
-- `--salt-hex` — same salt used at encryption time
-- `--src` — same source values used at encryption time
-
 ## Example workflow
 
 ```bash
 # encrypt
- dotnet run -- encrypt \
-   --in notes.txt \
-   --out notes.enc \
-   --salt-hex 00112233445566778899aabbccddeeff \
-   --src "device-123" \
-   --src @secrets/source.txt \
-   --pad pow2
+dotnet run -- encrypt \
+  --in notes.txt \
+  --out notes.enc \
+  --salt-hex 00112233445566778899aabbccddeeff \
+  --src "device-123" \
+  --src @secrets/source.txt \
+  --pad pow2
 
 # decrypt
- dotnet run -- decrypt \
-   --in notes.enc \
-   --out notes.txt \
-   --salt-hex 00112233445566778899aabbccddeeff \
-   --src "device-123" \
-   --src @secrets/source.txt
+dotnet run -- decrypt \
+  --in notes.enc \
+  --out notes.txt \
+  --salt-hex 00112233445566778899aabbccddeeff \
+  --src "device-123" \
+  --src @secrets/source.txt
 ```
+
+## FAQ
+
+### Why is this repository public?
+
+It is intentionally public so it can serve as a visible portfolio project for job searches and demonstrate security-oriented C# work.
+
+### Is this meant for production use?
+
+Not yet. The project is experimental and research-focused, so it should be reviewed, tested, and hardened further before production use.
+
+### Why use two AES-GCM layers?
+
+The implementation is exploring layered encryption patterns and how additional structure affects format design, metadata exposure, and key separation.
+
+### Why include FEC if the blob is already encrypted?
+
+In this project, FEC acts as an additional packaging layer and design experiment rather than a standalone backup or recovery system.
+
+### What should I keep consistent between encrypt and decrypt?
+
+Use the same:
+
+- `--salt-hex`
+- `--src` values
+- optional padding settings if you are reproducing a workflow
+
+### What happens if I do not provide any `--src` values?
+
+The tool will rely on system randomness and print a warning. For repeatable decryption, you should provide the same sources every time.
 
 ## Security notes
 
@@ -200,9 +256,10 @@ dotnet run -- decrypt \
 
 Potential next steps for this project could include:
 
-- CLI help and validation improvements
-- richer logging and error messages
+- richer input validation and help text
+- more detailed logging and error messages
 - support for shard-based recovery workflows
 - stronger documentation around the cryptographic format
 - automated tests for encryption/decryption round trips
+- benchmarks for key derivation and blob sizes
 
