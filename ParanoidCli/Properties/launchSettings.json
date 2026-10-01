@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ParanoidCli": {
+      "commandName": "Project",
+      "commandLineArgs": "encrypt --in AI-Terms.txt --out AI-TermsOut.enc --salt-hex 0011223344556677995577668833154826 --src hello"
+    }
+  }
+}
